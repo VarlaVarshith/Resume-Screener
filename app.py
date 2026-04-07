@@ -5,7 +5,280 @@ import spacy
 import pickle
 from datetime import datetime
 
-# Cache SpaCy model for performance
+# ─── Page Config ────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="ResumeIQ – Resume Analyzer",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# ─── Custom CSS ──────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, [data-testid="stAppViewContainer"] {
+    background: #0a0a0f;
+    color: #e8e6f0;
+    font-family: 'DM Sans', sans-serif;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: radial-gradient(ellipse at 20% 20%, #1a0a2e 0%, #0a0a0f 50%),
+                radial-gradient(ellipse at 80% 80%, #0d1a2e 0%, transparent 60%);
+    min-height: 100vh;
+}
+
+[data-testid="stHeader"] { background: transparent; }
+[data-testid="stToolbar"] { display: none; }
+.block-container { padding: 2rem 3rem 4rem !important; max-width: 1100px !important; }
+
+.hero {
+    text-align: center;
+    padding: 3.5rem 1rem 2.5rem;
+}
+.hero-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #7c3aed22, #06b6d422);
+    border: 1px solid #7c3aed55;
+    color: #a78bfa;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    border-radius: 100px;
+    margin-bottom: 1.4rem;
+}
+.hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+}
+.hero p {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #7c3aed44, #06b6d444, transparent);
+    margin: 2rem 0;
+}
+
+.glass-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1.8rem;
+    backdrop-filter: blur(12px);
+    margin-bottom: 1.2rem;
+}
+.glass-card:hover { border-color: rgba(124, 58, 237, 0.35); }
+
+.card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #7c3aed;
+    margin-bottom: 1.2rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+.info-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+}
+.info-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 0.3rem;
+}
+.info-value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #e2e8f0;
+    word-break: break-all;
+}
+
+.score-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+.score-ring-container {
+    position: relative;
+    width: 110px;
+    height: 110px;
+    flex-shrink: 0;
+}
+.score-ring-container svg { transform: rotate(-90deg); }
+.score-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.score-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #e2e8f0;
+    line-height: 1;
+}
+.score-label { font-size: 0.6rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }
+.score-meta { flex: 1; }
+.score-meta h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 0.4rem;
+}
+.score-meta p { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; }
+
+.chance-high   { background: #052e16; border: 1px solid #16a34a; color: #4ade80; }
+.chance-moderate { background: #1c1917; border: 1px solid #d97706; color: #fbbf24; }
+.chance-low    { background: #1c0b0b; border: 1px solid #dc2626; color: #f87171; }
+.chance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.4rem 1rem;
+    border-radius: 100px;
+    margin-bottom: 0.8rem;
+    letter-spacing: 0.05em;
+}
+
+.skills-wrap { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.skill-pill {
+    background: linear-gradient(135deg, #7c3aed18, #06b6d418);
+    border: 1px solid #7c3aed44;
+    color: #c4b5fd;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.3rem 0.85rem;
+    border-radius: 100px;
+}
+.skill-pill-missing {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: #fca5a5;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.3rem 0.85rem;
+    border-radius: 100px;
+}
+
+.tip-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: #94a3b8;
+    line-height: 1.6;
+}
+.tip-item:last-child { border-bottom: none; }
+.tip-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+.resource-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 0.5rem;
+    text-decoration: none;
+    font-size: 0.85rem;
+    color: #38bdf8;
+}
+
+[data-testid="stFileUploader"] {
+    background: rgba(124, 58, 237, 0.05) !important;
+    border: 2px dashed rgba(124, 58, 237, 0.35) !important;
+    border-radius: 14px !important;
+    padding: 1.5rem !important;
+}
+[data-testid="stSelectbox"] > div > div {
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+}
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, #7c3aed, #06b6d4) !important;
+    border-radius: 100px !important;
+}
+
+.section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 0.8rem;
+    margin-top: 0.3rem;
+}
+
+.alt-role {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 0.75rem 1.1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.88rem;
+}
+.alt-role-name { color: #e2e8f0; font-weight: 500; }
+.alt-role-score { color: #a78bfa; font-family: 'Syne', sans-serif; font-weight: 700; }
+
+.footer {
+    text-align: center;
+    color: #334155;
+    font-size: 0.78rem;
+    padding: 2.5rem 0 1rem;
+    letter-spacing: 0.05em;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─── Load SpaCy ──────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_spacy_model():
     try:
@@ -19,7 +292,7 @@ try:
 except Exception:
     st.stop()
 
-# Load pre-trained model and resources
+# ─── Load Pickles ────────────────────────────────────────────────────────────
 try:
     with open('model.pkl', 'rb') as f:
         model = pickle.load(f)
@@ -28,427 +301,372 @@ try:
     with open('category_skills.pkl', 'rb') as f:
         CATEGORY_SKILLS = pickle.load(f)
 except Exception as e:
-    st.error(f"Failed to load pickle files: {e}. Ensure model.pkl, encoder.pkl, and category_skills.pkl are in the same directory.")
+    st.error(f"Failed to load model files: {e}")
     st.stop()
 
-# Update CATEGORY_SKILLS with new categories
 CATEGORY_SKILLS.update({
-    "Frontend Developer": [
-        "HTML", "CSS", "JavaScript", "TypeScript", "React", "Next.js", "Vue.js",
-        "Tailwind CSS", "GSAP", "Framer Motion", "Figma", "Jest"
-    ],
-    "Backend Developer": [
-        "Node.js", "Express.js", "Python", "Java", "Go", "Spring Boot", "FastAPI",
-        "Flask", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Docker",
-        "Kubernetes", "REST API", "GraphQL", "Pytest"
-    ],
-    "Full Stack Developer": [
-        "HTML", "CSS", "JavaScript", "TypeScript", "React", "Next.js", "Vue.js",
-        "Tailwind CSS", "GSAP", "Framer Motion", "Figma", "Jest",
-        "Node.js", "Express.js", "Python", "Java", "Go", "Spring Boot", "FastAPI",
-        "Flask", "MongoDB", "PostgreSQL", "MySQL", "Redis", "Docker",
-        "Kubernetes", "REST API", "GraphQL", "Pytest", "Git", "AWS", "Azure",
-        "Vercel", "Netlify", "Zustand"
-    ]
+    "Frontend Developer": ["HTML","CSS","JavaScript","TypeScript","React","Next.js","Vue.js","Tailwind CSS","GSAP","Framer Motion","Figma","Jest"],
+    "Backend Developer": ["Node.js","Express.js","Python","Java","Go","Spring Boot","FastAPI","Flask","MongoDB","PostgreSQL","MySQL","Redis","Docker","Kubernetes","REST API","GraphQL","Pytest"],
+    "Full Stack Developer": ["HTML","CSS","JavaScript","TypeScript","React","Next.js","Vue.js","Tailwind CSS","GSAP","Framer Motion","Figma","Jest","Node.js","Express.js","Python","Java","Go","Spring Boot","FastAPI","Flask","MongoDB","PostgreSQL","MySQL","Redis","Docker","Kubernetes","REST API","GraphQL","Pytest","Git","AWS","Azure","Vercel","Netlify","Zustand"]
 })
 
-# Flatten CATEGORY_SKILLS and include variations + academic terms
 ALL_SKILLS = set()
 for skills in CATEGORY_SKILLS.values():
     ALL_SKILLS.update(skill.lower() for skill in skills)
-ALL_SKILLS.update([
-    'html5', 'css3', 'react.js', 'express.js', 'framer motion', 'next.js', 
-    'tailwind css', 'gsap', 'vercel', 'netlify', 'zustand', 
-    'algorithms', 'data structures', 'software engineering'
-])
+ALL_SKILLS.update(['html5','css3','react.js','express.js','framer motion','next.js','tailwind css','gsap','vercel','netlify','zustand','algorithms','data structures','software engineering'])
 
-# Learning resources for skills
 LEARNING_RESOURCES = {
-    "python": ["https://www.codecademy.com/learn/learn-python", "https://www.coursera.org/learn/python"],
-    "sql": ["https://www.w3schools.com/sql/", "https://www.sqlzoo.net/"],
-    "pandas": ["https://pandas.pydata.org/docs/getting_started/index.html"],
-    "numpy": ["https://numpy.org/learn/"],
-    "scikit-learn": ["https://scikit-learn.org/stable/tutorial/"],
-    "pytorch": ["https://pytorch.org/tutorials/"],
-    "tensorflow": ["https://www.tensorflow.org/learn"],
-    "matplotlib": ["https://matplotlib.org/stable/users/index.html"],
-    "seaborn": ["https://seaborn.pydata.org/"],
-    "tableau": ["https://www.tableau.com/learn"],
-    "power bi": ["https://learn.microsoft.com/en-us/power-bi/"],
-    "spark": ["https://spark.apache.org/docs/latest/"],
-    "hadoop": ["https://hadoop.apache.org/docs/stable/"],
-    "aws": ["https://aws.amazon.com/training/"],
-    "gcp": ["https://cloud.google.com/learn"],
-    "azure": ["https://learn.microsoft.com/en-us/azure/"],
-    "postgresql": ["https://www.postgresqltutorial.com/"],
-    "mysql": ["https://dev.mysql.com/doc/"],
-    "mongodb": ["https://www.mongodb.com/docs/"],
-    "dynamodb": ["https://aws.amazon.com/dynamodb/"],
-    "excel": ["https://support.microsoft.com/excel"],
-    "javascript": ["https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide"],
-    "typescript": ["https://www.typescriptlang.org/docs/"],
-    "java": ["https://www.oracle.com/java/technologies/"],
-    "c#": ["https://learn.microsoft.com/en-us/dotnet/csharp/"],
-    "go": ["https://go.dev/learn/"],
-    "react": ["https://react.dev/learn"],
-    "vue.js": ["https://vuejs.org/guide/"],
-    "node.js": ["https://nodejs.org/en/learn"],
-    "spring boot": ["https://spring.io/projects/spring-boot#learn"],
-    "fastapi": ["https://fastapi.tiangolo.com/tutorial/"],
-    "flask": ["https://flask.palletsprojects.com/en/stable/"],
-    "git": ["https://git-scm.com/doc"],
-    "redis": ["https://redis.io/docs/"],
-    "docker": ["https://docs.docker.com/get-started/"],
-    "kubernetes": ["https://kubernetes.io/docs/"],
-    "rest api": ["https://restfulapi.net/"],
-    "graphql": ["https://graphql.org/learn/"],
-    "jest": ["https://jestjs.io/docs/"],
-    "pytest": ["https://docs.pytest.org/en/stable/"],
-    "figma": ["https://www.figma.com/resources/learn-design/"],
-    "adobe xd": ["https://helpx.adobe.com/xd/get-started.html"],
-    "html": ["https://www.w3schools.com/html/"],
-    "css": ["https://developer.mozilla.org/en-US/docs/Web/CSS"],
-    "lottie": ["https://lottiefiles.com/learn"],
-    "framer": ["https://www.framer.com/learn/"],
-    "framer motion": ["https://www.framer.com/motion/"],
-    "jax": ["https://jax.readthedocs.io/en/stable/"],
-    "keras": ["https://keras.io/guides/"],
-    "opencv": ["https://opencv.org/get-started/"],
-    "yolo": ["https://docs.ultralytics.com/"],
-    "mlflow": ["https://mlflow.org/docs/"],
-    "tfx": ["https://www.tensorflow.org/tfx"],
-    "airflow": ["https://airflow.apache.org/docs/"],
-    "prefect": ["https://docs.prefect.io/"],
-    "next.js": ["https://nextjs.org/learn"],
-    "tailwind css": ["https://tailwindcss.com/docs"],
-    "gsap": ["https://greensock.com/docs/"],
-    "vercel": ["https://vercel.com/docs"],
-    "netlify": ["https://docs.netlify.com/"],
-    "zustand": ["https://zustand-demo.pmnd.rs/"],
-    "express.js": ["https://expressjs.com/en/starter/installing.html"]
+    "python":["https://www.codecademy.com/learn/learn-python","https://www.coursera.org/learn/python"],
+    "sql":["https://www.w3schools.com/sql/","https://www.sqlzoo.net/"],
+    "pandas":["https://pandas.pydata.org/docs/getting_started/index.html"],
+    "numpy":["https://numpy.org/learn/"],
+    "scikit-learn":["https://scikit-learn.org/stable/tutorial/"],
+    "pytorch":["https://pytorch.org/tutorials/"],
+    "tensorflow":["https://www.tensorflow.org/learn"],
+    "matplotlib":["https://matplotlib.org/stable/users/index.html"],
+    "seaborn":["https://seaborn.pydata.org/"],
+    "tableau":["https://www.tableau.com/learn"],
+    "power bi":["https://learn.microsoft.com/en-us/power-bi/"],
+    "spark":["https://spark.apache.org/docs/latest/"],
+    "aws":["https://aws.amazon.com/training/"],
+    "gcp":["https://cloud.google.com/learn"],
+    "azure":["https://learn.microsoft.com/en-us/azure/"],
+    "postgresql":["https://www.postgresqltutorial.com/"],
+    "mysql":["https://dev.mysql.com/doc/"],
+    "mongodb":["https://www.mongodb.com/docs/"],
+    "javascript":["https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide"],
+    "typescript":["https://www.typescriptlang.org/docs/"],
+    "java":["https://www.oracle.com/java/technologies/"],
+    "go":["https://go.dev/learn/"],
+    "react":["https://react.dev/learn"],
+    "vue.js":["https://vuejs.org/guide/"],
+    "node.js":["https://nodejs.org/en/learn"],
+    "spring boot":["https://spring.io/projects/spring-boot#learn"],
+    "fastapi":["https://fastapi.tiangolo.com/tutorial/"],
+    "flask":["https://flask.palletsprojects.com/"],
+    "git":["https://git-scm.com/doc"],
+    "docker":["https://docs.docker.com/get-started/"],
+    "kubernetes":["https://kubernetes.io/docs/"],
+    "rest api":["https://restfulapi.net/"],
+    "graphql":["https://graphql.org/learn/"],
+    "figma":["https://www.figma.com/resources/learn-design/"],
+    "html":["https://www.w3schools.com/html/"],
+    "css":["https://developer.mozilla.org/en-US/docs/Web/CSS"],
+    "framer motion":["https://www.framer.com/motion/"],
+    "keras":["https://keras.io/guides/"],
+    "opencv":["https://opencv.org/get-started/"],
+    "mlflow":["https://mlflow.org/docs/"],
+    "next.js":["https://nextjs.org/learn"],
+    "tailwind css":["https://tailwindcss.com/docs"],
+    "express.js":["https://expressjs.com/en/starter/installing.html"]
 }
 
+CATEGORY_ICONS = {
+    "Data Science":"🔬","Data Analyst":"📊","Software Development":"💻",
+    "UI/UX Designer":"🎨","AI/ML":"🤖","Frontend Developer":"🖥️",
+    "Backend Developer":"⚙️","Full Stack Developer":"🚀",
+}
+
+# ─── Core Functions ──────────────────────────────────────────────────────────
 def extract_text_from_pdf(pdf_file):
-    """Extract text from uploaded PDF resume."""
     try:
         text = ""
         with pdfplumber.open(pdf_file) as pdf:
             for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text
-        if not text:
-            st.error("No text extracted from PDF. Ensure it's a text-based PDF.")
+                t = page.extract_text()
+                if t: text += t
         return text
     except Exception as e:
-        st.error(f"Error reading PDF: {e}. Ensure the PDF is valid and not scanned.")
+        st.error(f"Error reading PDF: {e}")
         return ""
 
 def extract_name(text, skills_set=ALL_SKILLS):
-    """Extract name using regex, prioritizing multi-word names, with SpaCy fallback."""
     try:
         text = re.sub(r'[\s\r\n]+', ' ', text.strip())
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        name_pattern = re.compile(r'^[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*$')
-        if lines:
-            first_line = lines[0]
-            if name_pattern.match(first_line):
-                if skills_set is None or first_line.lower() not in skills_set:
-                    return first_line
-        if len(lines) > 1:
-            second_line = lines[1]
-            if name_pattern.match(second_line) and (skills_set is None or second_line.lower() not in skills_set):
-                return second_line
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        pat = re.compile(r'^[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*$')
+        for line in lines[:2]:
+            if pat.match(line) and (skills_set is None or line.lower() not in skills_set):
+                return line
         doc = nlp(text)
         for ent in doc.ents:
             if ent.label_ == "PERSON" and (skills_set is None or ent.text.lower() not in skills_set):
                 return ent.text.strip()
         return "Unknown"
-    except Exception as e:
-        st.error(f"Error extracting name: {e}")
-        return "Unknown"
+    except: return "Unknown"
 
 def extract_birth_year(text):
-    """Extract birth year and calculate age."""
     try:
-        birth_year_pattern = re.compile(r'\b(19|20)\d{2}\b')
-        match = birth_year_pattern.search(text)
-        if match:
-            birth_year = int(match.group())
-            current_year = datetime.now().year
-            age = current_year - birth_year
-            if 15 <= age <= 100:
-                return age
+        m = re.search(r'\b(19|20)\d{2}\b', text)
+        if m:
+            age = datetime.now().year - int(m.group())
+            if 15 <= age <= 100: return age
         return None
-    except Exception as e:
-        st.error(f"Error extracting birth year: {e}")
-        return None
+    except: return None
 
 def extract_email(text):
-    """Extract email address."""
     try:
-        email_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')
-        match = email_pattern.search(text)
-        return match.group() if match else "None"
-    except Exception as e:
-        st.error(f"Error extracting email: {e}")
-        return "None"
+        m = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', text)
+        return m.group() if m else "Not found"
+    except: return "Not found"
 
 def extract_phone_number(text):
-    """Extract phone number."""
     try:
-        phone_pattern = re.compile(r'\b(?:\+?1\s*?)?(?:\(\d{3}\)?|\d{3})[-.\s]?\d{3}[-.\s]?\d{4}\b')
-        match = phone_pattern.search(text)
-        return match.group() if match else "None"
-    except Exception as e:
-        st.error(f"Error extracting phone number: {e}")
-        return "None"
+        m = re.search(r'\b(?:\+?1\s*?)?(?:\(\d{3}\)?|\d{3})[-.\s]?\d{3}[-.\s]?\d{4}\b', text)
+        return m.group() if m else "Not found"
+    except: return "Not found"
 
 def extract_skills(text, target_skills):
-    """Extract skills from resume matching target skills with variation handling."""
     try:
-        found_skills = set()
-        text_lower = text.lower()
-        skill_mappings = {
-            "react.js": "react",
-            "html5": "html",
-            "css3": "css",
-            "framer motion": "framer motion",
-            "next.js": "next.js",
-            "tailwind css": "tailwind css",
-            "gsap": "gsap",
-            "vercel": "vercel",
-            "netlify": "netlify",
-            "zustand": "zustand",
-            "express.js": "express.js"
-        }
+        found = set()
+        tl = text.lower()
+        mappings = {"react.js":"react","html5":"html","css3":"css","framer motion":"framer motion","next.js":"next.js","tailwind css":"tailwind css","gsap":"gsap","vercel":"vercel","netlify":"netlify","zustand":"zustand","express.js":"express.js"}
         for skill in target_skills:
-            patterns = [r'\b' + re.escape(skill.lower()).replace(' ', r'\s*(?:,\s*|\s+|/)') + r'\b']
-            if skill.lower() in skill_mappings.values():
-                for key, value in skill_mappings.items():
-                    if value == skill.lower():
-                        patterns.append(r'\b' + re.escape(key.lower()).replace(' ', r'\s*(?:,\s*|\s+|/)') + r'\b')
-            for pattern in patterns:
-                if re.search(pattern, text_lower):
-                    found_skills.add(skill.lower())
-                    break
-        return sorted(list(found_skills))
-    except Exception as e:
-        st.error(f"Error extracting skills: {e}")
-        return []
+            pats = [r'\b' + re.escape(skill.lower()).replace(' ', r'\s*(?:,\s*|\s+|/)') + r'\b']
+            if skill.lower() in mappings.values():
+                for k, v in mappings.items():
+                    if v == skill.lower():
+                        pats.append(r'\b' + re.escape(k.lower()).replace(' ', r'\s*(?:,\s*|\s+|/)') + r'\b')
+            for p in pats:
+                if re.search(p, tl):
+                    found.add(skill.lower()); break
+        return sorted(list(found))
+    except: return []
 
-def clean_resume(resume_str):
-    """Clean resume text by removing sensitive data."""
+def clean_resume(t):
     try:
-        resume_str = re.sub(r'https?://\S+', '', resume_str)
-        resume_str = re.sub(r'\S+@\S+\.\S+', '', resume_str)
-        resume_str = re.sub(r'\b\d{10}\b', '', resume_str)
-        return resume_str
-    except Exception as e:
-        st.error(f"Error cleaning resume: {e}")
-        return resume_str
+        t = re.sub(r'https?://\S+', '', t)
+        t = re.sub(r'\S+@\S+\.\S+', '', t)
+        t = re.sub(r'\b\d{10}\b', '', t)
+        return t
+    except: return t
 
 def predict_category(resume_text):
-    """Predict job category using pre-trained model."""
     try:
-        resume_cleaned = clean_resume(resume_text)
-        y_pred = model.predict([resume_cleaned])
+        y_pred = model.predict([clean_resume(resume_text)])
         return encoder.inverse_transform(y_pred)[0]
-    except Exception as e:
-        st.error(f"Error predicting category with model: {e}")
-        return "Unknown"
+    except: return "Unknown"
 
 def calculate_resume_score(extracted_skills, target_skills):
-    """Calculate a resume score based on matched skills."""
     try:
-        if not target_skills:
-            return 0
-        matched_skills = len(extracted_skills)
-        total_skills = len(target_skills)
-        return round((matched_skills / total_skills) * 100, 2)
-    except Exception as e:
-        st.error(f"Error calculating resume score: {e}")
-        return 0
+        if not target_skills: return 0
+        return round((len(extracted_skills) / len(target_skills)) * 100, 2)
+    except: return 0
 
 def find_best_category(resume_text, category_skills):
-    """Find the category with the highest skill match score."""
     try:
-        best_category = None
-        best_score = -1
-        best_extracted_skills = []
-        best_target_skills = []
-
-        for category, skills in category_skills.items():
-            extracted_skills = extract_skills(resume_text, skills)
-            score = calculate_resume_score(extracted_skills, skills)
-            # st.write(f"DEBUG: Category {category} scored {score}%")  # Debug logging
-            if score > best_score:
-                best_category = category
-                best_score = score
-                best_extracted_skills = extracted_skills
-                best_target_skills = skills
-
-        if best_category is None:
-            # Fallback to model prediction if no skills match
-            best_category = predict_category(resume_text)
-            best_target_skills = category_skills.get(best_category, [])
-            best_extracted_skills = extract_skills(resume_text, best_target_skills)
-            best_score = calculate_resume_score(best_extracted_skills, best_target_skills)
-            # st.write(f"DEBUG: Fallback to model prediction: {best_category} with score {best_score}%")
-
-        return best_category, best_score, best_extracted_skills, best_target_skills
-    except Exception as e:
-        st.error(f"Error finding best category: {e}")
-        return "Unknown", 0, [], []
+        best_cat, best_score, best_ext, best_tgt = None, -1, [], []
+        for cat, skills in category_skills.items():
+            ext = extract_skills(resume_text, skills)
+            sc = calculate_resume_score(ext, skills)
+            if sc > best_score:
+                best_cat, best_score, best_ext, best_tgt = cat, sc, ext, skills
+        if best_cat is None:
+            best_cat = predict_category(resume_text)
+            best_tgt = category_skills.get(best_cat, [])
+            best_ext = extract_skills(resume_text, best_tgt)
+            best_score = calculate_resume_score(best_ext, best_tgt)
+        return best_cat, best_score, best_ext, best_tgt
+    except: return "Unknown", 0, [], []
 
 def predict_selection_chance(score, extracted_skills, target_skills, resume_text, selected_category, category_skills):
-    """Predict selection chance and provide improvement and safer side recommendations."""
     try:
-        # st.write(f"DEBUG: predict_selection_chance called with category: {selected_category}, score: {score}%")  # Debug logging
-
-        # Define selection chance
         if score > 80:
-            chance = "High"
-            chance_desc = "Your resume closely matches the requirements, giving a strong chance of selection."
+            chance, desc = "High", "Your resume closely matches the role requirements — strong chance of selection."
         elif score >= 50:
-            chance = "Moderate"
-            chance_desc = "Your resume is competitive but needs more skills to improve selection odds."
+            chance, desc = "Moderate", "Competitive resume, but a few more skills could significantly improve your odds."
         else:
-            chance = "Low"
-            chance_desc = "Your resume lacks critical skills, reducing selection chances."
+            chance, desc = "Low", "Your resume lacks several critical skills for this role."
 
-        # Improvement recommendations
-        missing_skills = [skill for skill in target_skills if skill.lower() not in extracted_skills]
-        improvement_tips = []
-        if missing_skills:
-            improvement_tips.append(f"Learn these missing skills: {', '.join(missing_skills)}.")
-            improvement_tips.append("Add projects or certifications showcasing these skills.")
+        missing = [s for s in target_skills if s.lower() not in extracted_skills]
+        tips = []
+        if missing:
+            tips.append(f"Acquire these missing skills: {', '.join(missing)}")
+            tips.append("Add projects or certifications that demonstrate these skills")
         if extracted_skills:
-            improvement_tips.append(f"Highlight skills ({', '.join(extracted_skills)}) in your resume’s skills section or projects.")
-        improvement_tips.append("Use ATS-friendly formats with clear headings and job-relevant keywords.")
+            preview = ', '.join(extracted_skills[:5]) + ('...' if len(extracted_skills) > 5 else '')
+            tips.append(f"Prominently feature your existing skills ({preview}) in a dedicated Skills section")
+        tips.append("Use ATS-friendly formatting with clear headings and role-specific keywords")
 
-        # Safer side strategy
-        alternative_categories = []
-        for category, skills in category_skills.items():
-            if category != selected_category:
-                alt_extracted_skills = extract_skills(resume_text, skills)
-                alt_score = calculate_resume_score(alt_extracted_skills, skills)
-                # st.write(f"DEBUG: Alternative category {category} scored {alt_score}%")  # Debug logging
-                alternative_categories.append((category, alt_score))
-        alternative_categories = sorted(alternative_categories, key=lambda x: x[1], reverse=True)[:2]
+        alts = []
+        for cat, skills in category_skills.items():
+            if cat != selected_category:
+                alt_ext = extract_skills(resume_text, skills)
+                alts.append((cat, calculate_resume_score(alt_ext, skills)))
+        alts = sorted(alts, key=lambda x: x[1], reverse=True)[:2]
 
-        safer_side = []
+        safer = []
         if chance in ["Moderate", "Low"]:
-            if alternative_categories and any(alt_score > score for _, alt_score in alternative_categories):
-                safer_side.append(f"Consider these roles with better skill alignment (based on: {selected_category}):")
-                for alt_cat, alt_score in alternative_categories:
-                    if alt_score > score:
-                        safer_side.append(f"- {alt_cat} (Score: {alt_score}%)")
+            better = [(c, s) for c, s in alts if s > score]
+            if better:
+                safer.append("Consider these better-matching roles:")
+                for c, s in better:
+                    safer.append(f"__ALT__{c}|{s}%")
             else:
-                safer_side.append(f"No better-matching roles found. Focus on improving skills for {selected_category}.")
-            safer_side.append(f"Apply for entry-level or internships in {selected_category} or related fields.")
-            safer_side.append("Network with industry professionals to boost visibility.")
+                safer.append(f"No better-matching roles found — focus on upskilling for {selected_category}")
+            safer.append(f"Apply for entry-level or internship positions in {selected_category}")
+            safer.append("Network with industry professionals to boost visibility")
         else:
-            safer_side.append(f"Your skills align well with {selected_category}; tailor your resume to job postings.")
+            safer.append(f"Your profile aligns well with {selected_category} — tailor your resume to each job posting")
 
-        return {
-            "chance": chance,
-            "chance_description": chance_desc,
-            "improvement_tips": improvement_tips,
-            "safer_side": safer_side
-        }
-    except Exception as e:
-        st.error(f"Error predicting selection chance: {e}")
-        return {
-            "chance": "Unknown",
-            "chance_description": "Unable to predict selection chance due to an error.",
-            "improvement_tips": ["Resolve the error and try again."],
-            "safer_side": ["Resolve the error and try again."]
-        }
+        return {"chance": chance, "chance_description": desc, "improvement_tips": tips, "safer_side": safer, "missing_skills": missing}
+    except:
+        return {"chance": "Unknown", "chance_description": "Error.", "improvement_tips": [], "safer_side": [], "missing_skills": []}
 
-# Streamlit App
-st.title("📄 Resume Analyzer")
-st.write("Select a job category or let the model predict one, then upload your resume.")
+def score_ring_html(score):
+    r = 44
+    circ = 2 * 3.14159 * r
+    offset = circ * (1 - score / 100)
+    color = "#4ade80" if score > 80 else ("#fbbf24" if score >= 50 else "#f87171")
+    return f"""<div class="score-ring-container">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle cx="55" cy="55" r="{r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
+            <circle cx="55" cy="55" r="{r}" fill="none" stroke="{color}" stroke-width="8"
+                stroke-dasharray="{circ}" stroke-dashoffset="{offset}" stroke-linecap="round"/>
+        </svg>
+        <div class="score-center">
+            <span class="score-number">{score}%</span>
+            <span class="score-label">Score</span>
+        </div>
+    </div>"""
 
-# Category selection
-try:
-    category_option = st.selectbox(
-        "Select Job Category (or 'Predict' for auto-detection)",
-        options=["Predict", "Data Science", "Data Analyst", "Software Development",
-                 "UI/UX Designer", "AI/ML", "Frontend Developer",
-                 "Backend Developer", "Full Stack Developer"]
-    )
-except Exception as e:
-    st.error(f"Error rendering category selector: {e}")
-    st.stop()
+# ══════════════════════════════════════════════════════════════════════════════
+#  UI
+# ══════════════════════════════════════════════════════════════════════════════
 
-st.write("📤 Upload your resume (PDF only)")
-try:
-    uploaded_file = st.file_uploader("", type=["pdf"], accept_multiple_files=False)
-except Exception as e:
-    st.error(f"Error rendering file uploader: {e}")
-    st.stop()
+st.markdown("""
+<div class="hero">
+    <div class="hero-badge">⚡ AI-Powered Resume Intelligence</div>
+    <h1>ResumeIQ</h1>
+    <p>Upload your resume and get instant insights — skill matching, score, and personalized career recommendations.</p>
+</div>
+<div class="divider"></div>
+""", unsafe_allow_html=True)
+
+col_cat, col_upload = st.columns([1, 1.4], gap="large")
+with col_cat:
+    st.markdown('<div class="section-label">🎯 Job Category</div>', unsafe_allow_html=True)
+    category_option = st.selectbox("Select a category", options=["Predict (Auto-detect)","Data Science","Data Analyst","Software Development","UI/UX Designer","AI/ML","Frontend Developer","Backend Developer","Full Stack Developer"], label_visibility="collapsed")
+
+with col_upload:
+    st.markdown('<div class="section-label">📄 Your Resume</div>', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=False, label_visibility="collapsed")
 
 if uploaded_file:
-    with st.spinner("Processing resume..."):
+    with st.spinner("Analyzing your resume..."):
         resume_text = extract_text_from_pdf(uploaded_file)
-        if resume_text:
-            st.success("PDF uploaded and processed successfully!")
 
-            # Extract details
-            name = extract_name(resume_text, ALL_SKILLS)
-            age = extract_birth_year(resume_text)
-            email = extract_email(resume_text)
-            phone = extract_phone_number(resume_text)
+    if resume_text:
+        name  = extract_name(resume_text, ALL_SKILLS)
+        age   = extract_birth_year(resume_text)
+        email = extract_email(resume_text)
+        phone = extract_phone_number(resume_text)
 
-            # Determine category and skills
-            if category_option == "Predict":
-                category, score, extracted_skills, target_skills = find_best_category(resume_text, CATEGORY_SKILLS)
-                # st.write(f"DEBUG: Predicted category: {category} with score {score}%")  # Debug logging
-            else:
-                category = category_option
-                target_skills = CATEGORY_SKILLS.get(category, [])
-                extracted_skills = extract_skills(resume_text, target_skills)
-                score = calculate_resume_score(extracted_skills, target_skills)
-                # st.write(f"DEBUG: Selected category: {category} with score {score}%")  # Debug logging
-
-            # Predict selection chance
-            selection_info = predict_selection_chance(score, extracted_skills, target_skills, resume_text, category, CATEGORY_SKILLS)
-
-            # Display results
-            st.header("📊 Analysis Result")
-            st.write(f"🧑 **Name**: {name}")
-            st.write(f"📧 **Email**: {email}")
-            st.write(f"📞 **Phone Number**: {phone}")
-            if age:
-                st.write(f"🎂 **Estimated Age**: {age}")
-            st.write(f"💼 **Category**: {category} {'(Predicted)' if category_option == 'Predict' else '(Selected)'}")
-            st.write(f"📌 **Extracted Skills**: {', '.join(extracted_skills) if extracted_skills else 'None'}")
-            st.write(f"🏆 **Resume Score**: {score}% (based on {len(extracted_skills)} out of {len(target_skills)} required skills)")
-            st.progress(score / 100)
-            st.write(f"🎯 **Selection Chance**: {selection_info['chance']} ({selection_info['chance_description']})")
-
-            # Display recommendations
-            st.subheader("🚀 Recommendations")
-            st.write("**To Improve Your Resume**:")
-            for tip in selection_info['improvement_tips']:
-                st.write(f"- {tip}")
-            st.write("**Safer Side Strategy**:")
-            for strategy in selection_info['safer_side']:
-                st.write(f"- {strategy}")
-
-            # Learning resources
-            missing_skills = [skill for skill in target_skills if skill.lower() not in extracted_skills]
-            if missing_skills:
-                st.subheader("📚 Recommended Learning Resources")
-                seen_urls = set()
-                for skill in missing_skills:
-                    resources = LEARNING_RESOURCES.get(skill.lower(), [])
-                    for url in resources:
-                        if url not in seen_urls:
-                            st.markdown(f"🔗 [Learn {skill.title()}]({url})")
-                            seen_urls.add(url)
-            else:
-                st.write(f"✅ **Feedback**: Great! You have all the necessary skills for {category}.")
+        if category_option.startswith("Predict"):
+            category, score, extracted_skills, target_skills = find_best_category(resume_text, CATEGORY_SKILLS)
+            mode_label = "(Auto-detected)"
         else:
-            st.error("Failed to extract text from the PDF. Ensure it's a text-based PDF and try again.")
+            category = category_option
+            target_skills = CATEGORY_SKILLS.get(category, [])
+            extracted_skills = extract_skills(resume_text, target_skills)
+            score = calculate_resume_score(extracted_skills, target_skills)
+            mode_label = "(Selected)"
+
+        sel = predict_selection_chance(score, extracted_skills, target_skills, resume_text, category, CATEGORY_SKILLS)
+        cat_icon = CATEGORY_ICONS.get(category, "💼")
+        chance = sel["chance"]
+        chance_class = f"chance-{chance.lower()}"
+        chance_icon = "🟢" if chance == "High" else ("🟡" if chance == "Moderate" else "🔴")
+
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-label">📊 Analysis Results</div>', unsafe_allow_html=True)
+
+        # Row 1
+        c1, c2 = st.columns([1.1, 1], gap="large")
+        with c1:
+            age_row = f'<div class="info-item"><div class="info-label">Estimated Age</div><div class="info-value">{age} yrs</div></div>' if age else ''
+            st.markdown(f"""<div class="glass-card">
+                <div class="card-title">👤 Profile</div>
+                <div class="info-grid">
+                    <div class="info-item"><div class="info-label">Name</div><div class="info-value">{name}</div></div>
+                    <div class="info-item"><div class="info-label">Email</div><div class="info-value">{email}</div></div>
+                    <div class="info-item"><div class="info-label">Phone</div><div class="info-value">{phone}</div></div>
+                    <div class="info-item"><div class="info-label">Detected Role</div><div class="info-value">{cat_icon} {category} {mode_label}</div></div>
+                    {age_row}
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+        with c2:
+            st.markdown(f"""<div class="glass-card" style="height:100%">
+                <div class="card-title">🏆 Resume Score</div>
+                <div class="score-wrapper">
+                    {score_ring_html(score)}
+                    <div class="score-meta">
+                        <div class="chance-badge {chance_class}">{chance_icon} {chance} Chance</div>
+                        <p>{sel['chance_description']}</p>
+                        <p style="margin-top:0.5rem;font-size:0.8rem;color:#64748b">{len(extracted_skills)} of {len(target_skills)} required skills matched</p>
+                    </div>
+                </div>
+            </div>""", unsafe_allow_html=True)
+
+        # Row 2
+        c3, c4 = st.columns(2, gap="large")
+        with c3:
+            pills = ''.join([f'<span class="skill-pill">{s}</span>' for s in extracted_skills]) or '<span style="color:#64748b;font-size:0.85rem">No matching skills found</span>'
+            st.markdown(f"""<div class="glass-card">
+                <div class="card-title">✅ Matched Skills</div>
+                <div class="skills-wrap">{pills}</div>
+            </div>""", unsafe_allow_html=True)
+
+        with c4:
+            missing = sel["missing_skills"]
+            mpills = ''.join([f'<span class="skill-pill-missing">{s}</span>' for s in missing]) or '<span style="color:#4ade80;font-size:0.85rem">🎉 All required skills matched!</span>'
+            st.markdown(f"""<div class="glass-card">
+                <div class="card-title">⚠️ Missing Skills</div>
+                <div class="skills-wrap">{mpills}</div>
+            </div>""", unsafe_allow_html=True)
+
+        # Row 3
+        c5, c6 = st.columns(2, gap="large")
+        with c5:
+            tips_html = ''.join([f'<div class="tip-item"><span class="tip-icon">→</span><span>{t}</span></div>' for t in sel["improvement_tips"]])
+            st.markdown(f"""<div class="glass-card">
+                <div class="card-title">🚀 Improvement Tips</div>
+                {tips_html}
+            </div>""", unsafe_allow_html=True)
+
+        with c6:
+            strategy_items = []
+            for s in sel["safer_side"]:
+                if s.startswith("__ALT__"):
+                    parts = s.replace("__ALT__","").split("|")
+                    aname, ascore = parts[0], (parts[1] if len(parts)>1 else "")
+                    strategy_items.append(f'<div class="alt-role"><span class="alt-role-name">{CATEGORY_ICONS.get(aname,"💼")} {aname}</span><span class="alt-role-score">{ascore}</span></div>')
+                else:
+                    strategy_items.append(f'<div class="tip-item"><span class="tip-icon">→</span><span>{s}</span></div>')
+            st.markdown(f"""<div class="glass-card">
+                <div class="card-title">🛡️ Safer Side Strategy</div>
+                {''.join(strategy_items)}
+            </div>""", unsafe_allow_html=True)
+
+        # Learning Resources
+        if missing:
+            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-label">📚 Recommended Learning Resources</div>', unsafe_allow_html=True)
+            seen = set()
+            res_cols = st.columns(2, gap="large")
+            idx = 0
+            for skill in missing:
+                for url in LEARNING_RESOURCES.get(skill.lower(), []):
+                    if url not in seen:
+                        with res_cols[idx % 2]:
+                            st.markdown(f'<a class="resource-link" href="{url}" target="_blank">🔗 Learn {skill.title()}</a>', unsafe_allow_html=True)
+                        seen.add(url)
+                        idx += 1
+    else:
+        st.error("Could not extract text. Please upload a text-based (non-scanned) PDF.")
+
+st.markdown("""
+<div class="divider"></div>
+<div class="footer">ResumeIQ · Powered by Machine Learning · Built with Streamlit</div>
+""", unsafe_allow_html=True)
