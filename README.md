@@ -1,38 +1,38 @@
-# ⚡ ResumeIQ – AI Resume Analyzer
+# ResumeIQ – AI Resume Analyzer
 
-## 📌 Overview
+## Overview
 
-ResumeIQ is an AI-powered Resume Screening System that analyzes resumes and matches them with job roles using Machine Learning and skill-based evaluation.
+ResumeIQ is an AI-powered resume screening system that analyzes resumes and matches them with relevant job roles using machine learning and skill-based evaluation.
 
-It helps recruiters and job seekers understand how well a resume fits a specific role and provides actionable improvement suggestions.
-
----
-
-## 🚀 Features
-
-* 📄 Upload resume (PDF format)
-* 🧠 Automatic job role prediction using ML
-* 🎯 Skill matching with job categories
-* 📊 Resume scoring system
-* 📉 Selection chance prediction (High / Moderate / Low)
-* ⚠️ Missing skills detection
-* 💡 Personalized improvement tips
-* 📚 Learning resource recommendations
-* 🎨 Modern UI built with Streamlit
+The system helps recruiters and job seekers understand how well a resume aligns with a specific role and provides actionable suggestions for improvement.
 
 ---
 
-## 🛠️ Tech Stack
+## Features
 
-* **Frontend/UI:** Streamlit
-* **Backend:** Python
-* **Machine Learning:** Scikit-learn
-* **NLP:** SpaCy
-* **PDF Processing:** pdfplumber
+* Upload resume in PDF format
+* Automatic job role prediction using machine learning
+* Skill extraction and matching with job categories
+* Resume scoring based on skill relevance
+* Selection chance prediction (High, Moderate, Low)
+* Identification of missing skills
+* Personalized improvement suggestions
+* Learning resource recommendations
+* Interactive user interface built with Streamlit
 
 ---
 
-## 📂 Project Structure
+## Tech Stack
+
+* Frontend: Streamlit
+* Backend: Python
+* Machine Learning: Scikit-learn
+* Natural Language Processing: SpaCy
+* PDF Processing: pdfplumber
+
+---
+
+## Project Structure
 
 Resume-Screener/
 │── app.py
@@ -44,7 +44,7 @@ Resume-Screener/
 
 ---
 
-## ▶️ How to Run
+## Installation and Setup
 
 ### 1. Clone the repository
 
@@ -65,32 +65,32 @@ streamlit run app.py
 
 ---
 
-## 📊 How it Works
+## How It Works
 
-1. Extracts text from uploaded PDF resume
-2. Cleans and processes the text
-3. Predicts job category using Machine Learning model
-4. Matches skills with predefined job requirements
-5. Calculates a resume score
-6. Provides improvement suggestions and career insights
-
----
-
-## 🎯 Future Enhancements
-
-* 🔍 Resume vs Job Description matching
-* 📂 Multiple resume ranking system
-* 📄 Downloadable report generation
-* 🌐 Deployment on cloud platforms
+1. Extracts text from the uploaded resume
+2. Cleans and processes the extracted text
+3. Predicts the job category using a trained machine learning model
+4. Matches extracted skills with predefined job requirements
+5. Calculates a resume score based on skill overlap
+6. Provides insights, suggestions, and improvement strategies
 
 ---
 
-## 👨‍💻 Author
+## Future Enhancements
 
-**Varla Varshith**
+* Resume and job description matching
+* Multiple resume comparison and ranking
+* Downloadable analysis reports
+* Deployment on cloud platforms
 
 ---
 
-## ⭐ Support
+## Author
 
-If you like this project, give it a ⭐ on GitHub!
+Varla Varshith
+
+---
+
+## License
+
+This project is for educational and demonstration purposes.
